@@ -1,0 +1,135 @@
+
+<html>
+  <head>
+  <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+  <meta content="utf-8" http-equiv="encoding">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SL Multipass Token Generator</title>
+  <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/1791/1791961.png">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300italic,700,700italic">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/milligram/1.4.1/milligram.css">
+  </head>
+
+  <body>
+  <div id="app">
+  <div class="container">
+    <h1>SL Multipass Token Encode</h1>
+    <fieldset>
+      <label for="secret">Secret</label>
+      <input type="text" id="secret" v-model="secret">
+
+      <label for="iv">AES Initialization Vector (iv) (optional, leave it blank to generate random iv)</label>
+      <input type="text" id="iv" v-model="iv">
+
+      <label for="data">JSON data</label>
+      <textarea id="data" v-model="data"></textarea>
+      <button class="button button-clear" v-on:click="formatJson">format</button>
+      <button class="button button-clear" v-on:click="insertTimestamp">insert timestamp</button>
+
+      <label for="shop_url">Shop URL</label>
+      <input type="text" id="shop_url" v-model="slShopUrl" placeholder="https://your-shop.shoplineapp.com">
+
+      <label for="shop_url">Extra Query String (optional)</label>
+      <input type="text" id="extra_query_string" v-model="extraQueryString" placeholder="?application_id=123">
+
+      <hr/>
+
+      <label for="token">Token</label>
+      <textarea id="token" disabled="disabled" v-bind:value="token"></textarea>
+
+      <a class="button button-clear" v-bind:href="loginUrl" target="new">right click open in incognito mode</button>
+      <a class="button button-clear" v-bind:href="shareUrl" target="new">right click copy link to current config</button>
+    </fieldset>
+  </div>
+  </div>
+
+
+  <script src="/static/multipass.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+  <script src="https://unpkg.com/vue-async-computed@3.9.0"></script>
+
+  <script>
+    const parseQueryString = (qs) => {
+      if (!qs || qs.length == 0) {
+        return {}
+      }
+      qs = qs.substring(1);
+      return JSON.parse('{"' + decodeURIComponent(qs).replace(/"/g, '\\"').replace(/&/g, '","').replace(/=/g,'":"') + '"}');
+    }
+    const toQueryString = (obj) => {
+      var str = [];
+      for (var p in obj)
+        if (obj.hasOwnProperty(p)) {
+          str.push(encodeURIComponent(p) + "=" + encodeURIComponent(obj[p]));
+        }
+      return str.join("&");
+    }
+
+    const qs = parseQueryString(window.location.search)
+
+    Vue.use(AsyncComputed);
+    new Vue({
+      el: '#app',
+      data: () => {
+        return {
+          secret: qs.secret || 'multipass secret from shop admin',
+          iv: qs.iv || '468094f4e6d6a50ce3f12c9dca6813cd',
+          data: qs.data || '{"email":"bob@example.com"}',
+          variant: qs.variant,
+          slShopUrl: qs.sl_shop_url || '',
+          extraQueryString: qs.extra_query_string || '',
+        }
+      },
+      created() {
+        if (qs.insert_timestamp != 'false') {
+          this.insertTimestamp()
+        }
+      },
+      methods: {
+        formatJson() {
+          this.data = JSON.stringify(JSON.parse(this.data))
+        },
+        insertTimestamp() {
+          const data = JSON.parse(this.data)
+          data.created_at = Math.floor(new Date() / 1000)
+          this.data = JSON.stringify(data)
+        }
+      },
+      asyncComputed: {
+        async token() {
+          if (!this.secret) {
+            return ''
+          }
+
+          try {
+            const m = new Multipass(this.secret, this.iv);
+            return await m.encode(this.data);
+          } catch(e) {
+            console.error(e)
+            return '';
+          }
+        }
+      },
+      computed: {
+        loginUrl() {
+          return `${this.slShopUrl}/users/sign_in/multipass/${this.token}${this.extraQueryString}`;
+        },
+        shareUrl() {
+          const { protocol, host, pathname } = window.location;
+          const fullUrlWithoutParams = `${protocol}//${host}${pathname}`;
+          const qs = toQueryString({
+            secret: this.secret,
+            iv: this.iv,
+            data: this.data,
+            variant: this.variant,
+            sl_shop_url: this.slShopUrl,
+          })
+          return `${fullUrlWithoutParams}?${qs}`;
+        }
+      }
+    });
+  </script>
+  </body>
+</html>
