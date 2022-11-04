@@ -19,7 +19,7 @@
       <label for="secret">Secret</label>
       <input type="text" id="secret" v-model="secret">
 
-      <label for="iv">AES Initialization Vector (iv) (optional, leave it blank to generate random iv)</label>
+      <label for="iv">AES Initialization Vector (iv) (optional, leave it blank to use a random iv)</label>
       <input type="text" id="iv" v-model="iv">
 
       <label for="data">JSON data</label>
@@ -31,7 +31,7 @@
       <input type="text" id="shop_url" v-model="slShopUrl" placeholder="https://your-shop.shoplineapp.com">
 
       <label for="shop_url">Extra Query String (optional)</label>
-      <input type="text" id="extra_query_string" v-model="extraQueryString" placeholder="?application_id=123">
+      <input type="text" id="extra_query_string" v-model="extraQueryString" placeholder="?app_id=123">
 
       <hr/>
 
@@ -78,7 +78,7 @@
           iv: qs.iv || '468094f4e6d6a50ce3f12c9dca6813cd',
           data: qs.data || '{"email":"bob@example.com"}',
           variant: qs.variant,
-          slShopUrl: qs.sl_shop_url || '',
+          slShopUrl: qs.sl_shop_url || 'https://example.shoplineapp.com',
           extraQueryString: qs.extra_query_string || '',
         }
       },
